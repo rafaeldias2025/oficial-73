@@ -12,7 +12,7 @@ import { useDadosSaude } from '@/hooks/useDadosSaude';
 
 /**
  * Componente do modelo glTF da silhueta
- * Carrega o modelo de /src/models/silhueta.glb e aplica materiais dinâmicos
+ * Carrega o modelo de /public/models/silhueta.glb e aplica materiais dinâmicos
  */
 interface SilhuetaGLTFProps {
   color: string;
@@ -22,34 +22,40 @@ interface SilhuetaGLTFProps {
 const SilhuetaGLTF: React.FC<SilhuetaGLTFProps> = ({ color, autoRotate }) => {
   const meshRef = useRef<THREE.Group>(null);
   
-  // Carregar o modelo glTF
+  // Carregar o modelo glTF - certifique-se que o arquivo está em public/models/
   const { scene } = useGLTF('/models/silhueta.glb');
   
   // Clone da cena para evitar conflitos de materiais
-  const clonedScene = scene.clone();
+  const clonedScene = React.useMemo(() => scene.clone(), [scene]);
 
   // Aplicar cor dinâmica ao material
   React.useEffect(() => {
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
+        // Criar uma cópia do material para evitar afetar outras instâncias
+        const material = child.material.clone();
+        
         if (Array.isArray(child.material)) {
           // Material múltiplo
-          child.material.forEach(mat => {
-            if (mat instanceof THREE.MeshStandardMaterial) {
-              mat.color.set(color);
-              mat.roughness = 0.4;
-              mat.metalness = 0.2;
-              mat.emissive.set(color);
-              mat.emissiveIntensity = 0.1;
+          child.material = child.material.map(mat => {
+            const clonedMat = mat.clone();
+            if (clonedMat instanceof THREE.MeshStandardMaterial) {
+              clonedMat.color.set(color);
+              clonedMat.roughness = 0.4;
+              clonedMat.metalness = 0.2;
+              clonedMat.emissive.set(color);
+              clonedMat.emissiveIntensity = 0.1;
             }
+            return clonedMat;
           });
-        } else if (child.material instanceof THREE.MeshStandardMaterial) {
+        } else if (material instanceof THREE.MeshStandardMaterial) {
           // Material único
-          child.material.color.set(color);
-          child.material.roughness = 0.4;
-          child.material.metalness = 0.2;
-          child.material.emissive.set(color);
-          child.material.emissiveIntensity = 0.1;
+          material.color.set(color);
+          material.roughness = 0.4;
+          material.metalness = 0.2;
+          material.emissive.set(color);
+          material.emissiveIntensity = 0.1;
+          child.material = material;
         }
       }
     });
@@ -206,7 +212,7 @@ const SilhuetaDemo: React.FC = () => {
             intensity={0.4}
           />
           
-          <Suspense fallback={<Html center>Carregando...</Html>}>
+  <Suspense fallback={<LoadingComponent />}>
             <SilhuetaGLTF 
               color={materialColor}
               autoRotate={autoRotate}
@@ -240,7 +246,9 @@ const SilhuetaDemo: React.FC = () => {
   );
 };
 
-// Preload do modelo para melhor performance
-useGLTF.preload('/models/silhueta.glb');
+// Função para preload do modelo - deve ser chamada em outro lugar, não aqui
+export const preloadSilhuetaModel = () => {
+  useGLTF.preload('/models/silhueta.glb');
+};
 
 export default SilhuetaDemo;
