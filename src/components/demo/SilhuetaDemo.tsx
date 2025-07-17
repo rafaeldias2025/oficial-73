@@ -17,9 +17,11 @@ import { useDadosSaude } from '@/hooks/useDadosSaude';
 interface SilhuetaGLTFProps {
   color: string;
   autoRotate: boolean;
+  position: [number, number, number];
+  scale: number;
 }
 
-const SilhuetaGLTF: React.FC<SilhuetaGLTFProps> = ({ color, autoRotate }) => {
+const SilhuetaGLTF: React.FC<SilhuetaGLTFProps> = ({ color, autoRotate, position, scale }) => {
   const meshRef = useRef<THREE.Group>(null);
   
   // Carregar o modelo glTF - certifique-se que o arquivo está em public/models/
@@ -70,8 +72,8 @@ const SilhuetaGLTF: React.FC<SilhuetaGLTFProps> = ({ color, autoRotate }) => {
   });
 
   return (
-    <group ref={meshRef} position={[0, -1, 0]}>
-      <primitive object={clonedScene} scale={0.5} />
+    <group ref={meshRef} position={position}>
+      <primitive object={clonedScene} scale={scale} />
     </group>
   );
 };
@@ -118,6 +120,11 @@ const SilhuetaDemo: React.FC = () => {
   const { dadosSaude } = useDadosSaude();
   const [materialColor, setMaterialColor] = useState('#f97316');
   const [autoRotate, setAutoRotate] = useState(true);
+  
+  // Controles de posicionamento
+  const [modelPosition, setModelPosition] = useState<[number, number, number]>([0, -1, 0]);
+  const [modelScale, setModelScale] = useState(0.5);
+  const [cameraDistance, setCameraDistance] = useState(8);
 
   // Calcular cor baseada no IMC se dados disponíveis
   useEffect(() => {
@@ -139,9 +146,15 @@ const SilhuetaDemo: React.FC = () => {
     { name: 'Vermelho', value: '#ef4444' }
   ];
 
+  const adjustPosition = (axis: number, value: number) => {
+    const newPos: [number, number, number] = [...modelPosition];
+    newPos[axis] += value;
+    setModelPosition(newPos);
+  };
+
   return (
     <div className="flex w-full h-full">
-      <div className="w-64 p-4 bg-card border-r space-y-4">
+      <div className="w-64 p-4 bg-card border-r space-y-4 overflow-y-auto">
         <h2 className="text-xl font-bold text-card-foreground">Silhueta 3D</h2>
         
         {/* Dados da Balança */}
@@ -164,6 +177,133 @@ const SilhuetaDemo: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Controles de Posicionamento */}
+        <div className="bg-muted p-3 rounded-lg">
+          <h3 className="text-sm font-semibold text-card-foreground mb-2">Posição do Modelo</h3>
+          
+          {/* Controles X (Esquerda/Direita) */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs">Horizontal:</span>
+            <div className="flex gap-1">
+              <button 
+                onClick={() => adjustPosition(0, -0.1)}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                ←
+              </button>
+              <span className="px-2 py-1 text-xs min-w-[3rem] text-center">
+                {modelPosition[0].toFixed(1)}
+              </span>
+              <button 
+                onClick={() => adjustPosition(0, 0.1)}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                →
+              </button>
+            </div>
+          </div>
+
+          {/* Controles Y (Cima/Baixo) */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs">Vertical:</span>
+            <div className="flex gap-1">
+              <button 
+                onClick={() => adjustPosition(1, -0.1)}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                ↓
+              </button>
+              <span className="px-2 py-1 text-xs min-w-[3rem] text-center">
+                {modelPosition[1].toFixed(1)}
+              </span>
+              <button 
+                onClick={() => adjustPosition(1, 0.1)}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                ↑
+              </button>
+            </div>
+          </div>
+
+          {/* Controles Z (Frente/Trás) */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs">Profundidade:</span>
+            <div className="flex gap-1">
+              <button 
+                onClick={() => adjustPosition(2, -0.1)}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                ↙
+              </button>
+              <span className="px-2 py-1 text-xs min-w-[3rem] text-center">
+                {modelPosition[2].toFixed(1)}
+              </span>
+              <button 
+                onClick={() => adjustPosition(2, 0.1)}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                ↗
+              </button>
+            </div>
+          </div>
+
+          {/* Escala */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs">Tamanho:</span>
+            <div className="flex gap-1">
+              <button 
+                onClick={() => setModelScale(Math.max(0.1, modelScale - 0.1))}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                -
+              </button>
+              <span className="px-2 py-1 text-xs min-w-[3rem] text-center">
+                {modelScale.toFixed(1)}
+              </span>
+              <button 
+                onClick={() => setModelScale(Math.min(2, modelScale + 0.1))}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Câmera */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs">Distância:</span>
+            <div className="flex gap-1">
+              <button 
+                onClick={() => setCameraDistance(Math.max(3, cameraDistance - 1))}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                -
+              </button>
+              <span className="px-2 py-1 text-xs min-w-[3rem] text-center">
+                {cameraDistance}
+              </span>
+              <button 
+                onClick={() => setCameraDistance(Math.min(15, cameraDistance + 1))}
+                className="px-2 py-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Botão Reset */}
+          <button 
+            onClick={() => {
+              setModelPosition([0, -1, 0]);
+              setModelScale(0.5);
+              setCameraDistance(8);
+            }}
+            className="w-full mt-2 py-1 px-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded text-xs"
+          >
+            Resetar Posição
+          </button>
+        </div>
         
         <div>
           <button 
@@ -196,7 +336,7 @@ const SilhuetaDemo: React.FC = () => {
 
       <div className="flex-1 h-full relative">
         <Canvas 
-          camera={{ position: [0, 0, 8], fov: 45 }} 
+          camera={{ position: [0, 0, cameraDistance], fov: 45 }} 
           style={{ width: '100%', height: '100%' }}
           gl={{ antialias: true }}
           shadows
@@ -212,10 +352,12 @@ const SilhuetaDemo: React.FC = () => {
             intensity={0.4}
           />
           
-  <Suspense fallback={<LoadingComponent />}>
+          <Suspense fallback={<LoadingComponent />}>
             <SilhuetaGLTF 
               color={materialColor}
               autoRotate={autoRotate}
+              position={modelPosition}
+              scale={modelScale}
             />
           </Suspense>
 
